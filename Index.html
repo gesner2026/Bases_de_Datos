@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Integración de Bases de Datos | SIBD</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --success-bg: #dcfce7;
+            --success-text: #166534;
+            --warning-bg: #fef9c3;
+            --warning-text: #854d0e;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            margin: 0;
+            padding: 20px 10px;
+        }
+
+        .main-card {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .side-actions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon:hover { background: #e2e8f0; }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 { font-size: 28px; color: var(--primary); margin-bottom: 8px; }
+        .header p { color: #64748b; margin: 0; }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .drop-zone:hover { border-color: var(--accent); }
+        .drop-zone h3 { margin-top: 0; font-size: 16px; color: var(--primary); }
+        
+        input[type="file"] {
+            width: 100%;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-verify { background: var(--accent); color: white; }
+        .btn-reset { background: #94a3b8; color: white; }
+        button:active { transform: scale(0.98); }
+
+        .filter-container {
+            margin-bottom: 15px;
+            display: none;
+            text-align: right;
+        }
+
+        .filter-container select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .results-container { 
+            overflow-x: auto; 
+            background: white;
+            padding: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            display: none;
+            margin-top: 10px;
+            min-width: 600px;
+        }
+
+        th { 
+            background: #f8fafc; 
+            text-align: left; 
+            padding: 15px; 
+            font-size: 13px; 
+            text-transform: uppercase; 
+            border-bottom: 2px solid var(--border);
+        }
+
+        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; text-transform: uppercase; }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-ready { background: var(--success-bg); color: var(--success-text); }
+        .badge-pending { background: var(--warning-bg); color: var(--warning-text); }
+
+        .footer-note { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px; }
+
+        @media print {
+            .side-actions, .header, .upload-grid, .button-group, .filter-container, .footer-note { display: none !important; }
+            .main-card { box-shadow: none; border: none; padding: 0; }
+            table { display: table !important; width: 100%; border: 1px solid #000; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-card">
+    <div class="side-actions" id="sideActions">
+        <button class="btn-icon" onclick="window.print()" title="Imprimir Tabla">🖨️</button>
+    </div>
+    
+    <div class="header">
+        <h1>SIBD</h1>
+        <p>Sistema de Integración de Bases de Datos </p>
+    </div>
+
+    <div class="upload-grid">
+        <div class="drop-zone">
+            <h3>📂 Pacientes Asignados (Base de Datos)</h3>
+            <input type="file" id="fileTerapeuta" accept=".csv, .xlsx, .xls">
+        </div>
+        <div class="drop-zone">
+            <h3>✅ Listado de Verificación (Base de  Datos)</h3>
+            <input type="file" id="fileActivos" accept=".csv, .xlsx, .xls">
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button class="btn-verify" onclick="procesarVerificacion()">VERIFICAR REGISTROS</button>
+        <button class="btn-reset" onclick="nuevaVerificacion()">NUEVA VERIFICACIÓN</button>
+    </div>
+
+    <div class="filter-container" id="filterContainer">
+        <label for="statusFilter">Filtrar estado: </label>
+        <select id="statusFilter" onchange="filtrarResultados()">
+            <option value="todos">Todos</option>
+            <option value="ready">Listos para evolucionar</option>
+            <option value="pending">Pendientes por activar</option>
+        </select>
+    </div>
+
+    <div class="results-container" id="captureArea">
+        <table id="tablaResultados">
+            <thead>
+                <tr>
+                    <th>N°</th>
+                    <th>Documento de Identidad</th>
+                    <th>Nombre Completo del Paciente</th>
+                    <th>Estado de Verificación</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoTabla"></tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        Todos los derechos reservados.
+    </div>
+
+    <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 30px;">
+        &copy; 2026 Copyright. Elaborado por Psic. Gesner Pibustta.
+    </p>
+
+</div>
+
+<script>
+    async function leerArchivo(fileInput) {
+        const file = fileInput.files[0];
+        if (!file) return null;
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                // XLSX maneja automáticamente la codificación UTF-8
+                const workbook = XLSX.read(data, { type: 'array', codepage: 65001 });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                const lista = json.slice(1).map(fila => ({
+                    documento: fila[0] ? String(fila[0]).trim() : "",
+                    nombre: fila[1] ? String(fila[1]).trim().toUpperCase() : ""
+                })).filter(p => p.documento !== "");
+                
+                resolve(lista);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async function procesarVerificacion() {
+        const inputT = document.getElementById('fileTerapeuta');
+        const inputA = document.getElementById('fileActivos');
+
+        if (!inputT.files[0] || !inputA.files[0]) {
+            alert("⚠️ Cargue ambos archivos para continuar.");
+            return;
+        }
+
+        const listaTerapeuta = await leerArchivo(inputT);
+        const listaActivos = await leerArchivo(inputA);
+        const documentosActivosSet = new Set(listaActivos.map(p => p.documento));
+
+        const tabla = document.getElementById('tablaResultados');
+        const cuerpo = document.getElementById('cuerpoTabla');
+        
+        cuerpo.innerHTML = ''; 
+        tabla.style.display = 'table';
+        document.getElementById('filterContainer').style.display = 'block';
+        document.getElementById('sideActions').style.display = 'flex';
+
+        listaTerapeuta.forEach((paciente, index) => {
+            const row = cuerpo.insertRow();
+            const isReady = documentosActivosSet.has(paciente.documento);
+            row.setAttribute('data-status', isReady ? 'ready' : 'pending');
+            
+            row.insertCell(0).textContent = index + 1;
+            row.insertCell(1).textContent = paciente.documento;
+            row.insertCell(2).textContent = paciente.nombre;
+            
+            const cellStatus = row.insertCell(3);
+            if (isReady) {
+                cellStatus.innerHTML = '<span class="badge badge-ready">Listo para evolucionar</span>';
+            } else {
+                cellStatus.innerHTML = '<span class="badge badge-pending">Pendiente por activar</span>';
+            }
+        });
+    }
+
+    function filtrarResultados() {
+        const val = document.getElementById('statusFilter').value;
+        const rows = document.querySelectorAll('#cuerpoTabla tr');
+        let contador = 1;
+        rows.forEach(row => {
+            const match = (val === 'todos' || row.getAttribute('data-status') === val);
+            row.style.display = match ? '' : 'none';
+            if(match) row.cells[0].textContent = contador++;
+        });
+    }
+
+    function nuevaVerificacion() {
+        document.getElementById('fileTerapeuta').value = '';
+        document.getElementById('fileActivos').value = '';
+        document.getElementById('tablaResultados').style.display = 'none';
+        document.getElementById('filterContainer').style.display = 'none';
+        document.getElementById('sideActions').style.display = 'none';
+        document.getElementById('cuerpoTabla').innerHTML = '';
+        document.getElementById('statusFilter').value = 'todos';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
